@@ -6,12 +6,13 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain.llms import OpenAI
 from langchain.chains import RetrievalQA
 from langchain.document_loaders import TextLoader
-
+import os
 
 config = dotenv_values(".env")
 
-OPENAI_API_KEY = config["OPENAI_API_KEY"]
-
+# OPENAI_API_KEY = config["OPENAI_API_KEY"]
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+# print(OPENAI_API_KEY)
 # Set up the Streamlit app
 st.title("Question Answering App")
 st.write("Enter a long text and convert it to a text file for further processing.")
