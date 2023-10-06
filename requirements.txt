@@ -5,3 +5,4 @@ langchain==0.0.133
 streamlit
 pandas==1.5.3
 python-dotenv
+PyPDF2==3.0.1
