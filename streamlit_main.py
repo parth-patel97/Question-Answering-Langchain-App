@@ -2,65 +2,55 @@ import streamlit as st
 from langchain.vectorstores import Chroma
 from langchain.text_splitter import CharacterTextSplitter
 from langchain.llms import Cohere
-from langchain.chains import RetrievalQA
-from langchain.document_loaders import TextLoader
+from PyPDF2 import PdfReader
 from langchain.embeddings import CohereEmbeddings
-
-def process_long_text(long_text):
-    # Save the long text to a file
-    with open("input.txt", "w", encoding="utf-8") as file:
-        file.write(long_text)
-
-    loader = TextLoader("input.txt")
-    documents = loader.load()
-
-    text_splitter = CharacterTextSplitter(chunk_size=10, chunk_overlap=0)
-    texts = text_splitter.split_documents(documents)
-
-    embeddings = CohereEmbeddings(
-        cohere_api_key='FoY9OqiB9Zpsm1siHOGOYHrgXn2ExUHwn9YVSmzk')
-    docsearch = Chroma.from_documents(texts, embeddings)
-    llm = Cohere(cohere_api_key='FoY9OqiB9Zpsm1siHOGOYHrgXn2ExUHwn9YVSmzk')
-    qa = RetrievalQA.from_chain_type(llm=llm,
-                                     chain_type="stuff", retriever=docsearch.as_retriever(search_kwargs={"k": 1}))
-
-    return qa
+from langchain.chains import ConversationalRetrievalChain
+from langchain.memory import ConversationBufferMemory
+from dotenv import load_dotenv
 
 
-def question_answering_app():
-    # Set up the Streamlit app
-    st.title("Question Answering App")
-    st.write("Enter a long text and convert it to a text file for further processing.")
+def main():
+    load_dotenv()
+    st.set_page_config(page_title="Ask your PDF")
+    st.header("Ask your PDF")
 
-    # Create input box for long text
-    long_text = st.text_area("Enter long text", height=300)
+    # upload file
+    pdf = st.file_uploader("Upload your PDF", type="pdf")
 
-    # Create a placeholder for the qa variable
-    session_state = st.session_state
-    if 'qa' not in session_state:
-        session_state.qa = None
+    # extract the text
+    if pdf is not None:
+        pdf_reader = PdfReader(pdf)
+        text = ""
+        for page in pdf_reader.pages:
+            text += page.extract_text()
 
-    # Button to convert long text to text file
-    if st.button("Convert to Text File"):
-        session_state.qa = process_long_text(long_text)
-        st.write("Process is completed successfully!")
+        # split into chunks
+        text_splitter = CharacterTextSplitter(
+            separator="\n",
+            chunk_size=1000,
+            chunk_overlap=0,
+            length_function=len
+        )
+        chunks = text_splitter.split_text(text)
+        embeddings = CohereEmbeddings(
+            cohere_api_key='FoY9OqiB9Zpsm1siHOGOYHrgXn2ExUHwn9YVSmzk')
+        doc_search = Chroma.from_texts(chunks, embeddings)
+        llm = Cohere(cohere_api_key='FoY9OqiB9Zpsm1siHOGOYHrgXn2ExUHwn9YVSmzk')
+        retriever = doc_search.as_retriever(search_kwargs={"k": 1})
+        ConversationBufferMemory(
+            memory_key="chat_history", return_messages=True)
+        qa = ConversationalRetrievalChain.from_llm(llm, retriever)
+        if qa:
+            question = st.text_input("Ask a question")
+            button = st.button("Answer")
+            if question and button:
+                chat_history = []
+                result = qa(
+                    {"question": question, "chat_history": chat_history})
+                answer = result['answer']
+                chat_history = [(question, result["answer"])]
+                st.write("Answer:", answer)
 
-    # Process user input when question is provided
-    if session_state.qa is not None:
-        # Create input box for asking questions
-        question = st.text_input("Ask a question")
 
-        if question:
-            result = session_state.qa.run(question)
-            answer = result
-
-            # Display the answer
-            st.write("Answer:", answer)
-        else:
-            st.write("Please enter a question.")
-    else:
-        st.write("Please convert the long text to a text file first.")
-
-
-if __name__ == "__main__":
-    question_answering_app()
+if __name__ == '__main__':
+    main()
