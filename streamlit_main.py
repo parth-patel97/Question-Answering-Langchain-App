@@ -1,3 +1,4 @@
+import os
 import streamlit as st
 from langchain.vectorstores import Chroma
 from langchain.text_splitter import CharacterTextSplitter
@@ -7,6 +8,10 @@ from langchain.embeddings import CohereEmbeddings
 from langchain.chains import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
 from dotenv import load_dotenv
+
+load_dotenv()
+
+COHERE_API_KEY = os.getenv("COHERE_API_KEY")
 
 
 def main():
@@ -33,9 +38,9 @@ def main():
         )
         chunks = text_splitter.split_text(text)
         embeddings = CohereEmbeddings(
-            cohere_api_key='FoY9OqiB9Zpsm1siHOGOYHrgXn2ExUHwn9YVSmzk')
+            cohere_api_key=COHERE_API_KEY)
         doc_search = Chroma.from_texts(chunks, embeddings)
-        llm = Cohere(cohere_api_key='FoY9OqiB9Zpsm1siHOGOYHrgXn2ExUHwn9YVSmzk')
+        llm = Cohere(cohere_api_key=COHERE_API_KEY)
         retriever = doc_search.as_retriever(search_kwargs={"k": 1})
         ConversationBufferMemory(
             memory_key="chat_history", return_messages=True)
