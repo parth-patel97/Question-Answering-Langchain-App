@@ -1,2 +1,2 @@
 # Question-Answering-Langchain-App
-App for question-answering using Langchain and OpenAI
+QnA app using Langchain and OpenAI
